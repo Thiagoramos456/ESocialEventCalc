@@ -1,8 +1,23 @@
 import JSZip from 'jszip';
 import { useEffect, useRef, useState } from 'react';
 
+// const availableEvents = ["1200", "5002"]
+const availableEvents = ["1200"]
+
+function isNumeric(value) {
+  return /^-?\d+$/.test(value);
+}
+
 function App() {
-  const [xmls, setXmls] = useState([]);
+  const [xmls, setXmls] = useState({});
+  const [eventType, setEventType] = useState("1200");
+  const [period, setPeriod] = useState("2025-02-20");
+  const [rubricasInput, setRubricasInput] = useState("");
+  const [rubricas, setRubricas] = useState("");
+
+  const [totalSum, setTotalSum] = useState("");
+  const [laborersSum, setLaborersSum] = useState({});
+  
 
 
   const handleFileChange = (e) => {
@@ -12,14 +27,65 @@ function App() {
   }
 
   const loadXmls = async (zipFile) => {
-    JSZip.loadAsync(zipFile).then(async (zip) => {
-      const xmlsParsed = Object.values(zip.files).map(file => {
-        return file.async("string");
-      });
+    const xmlMap = {}
 
-      const xmlList = await Promise.all(xmlsParsed)
-      setXmls(xmlList)
+    JSZip.loadAsync(zipFile).then(async (zip) => {
+      const zipFiles = Object.values(zip.files);
+
+      for (const file of zipFiles) {
+        const name = file.name.split("S-")[1];
+
+        if (!name) continue;
+        
+        if (!availableEvents.includes(name.replace(".xml", "")))
+          continue;
+
+        const xmlString = await file.async("string");
+        xmlMap[file.name] = xmlString;
+      }
+      setXmls(xmlMap);
     })
+
+  }
+
+  const onClickCalc = () => {
+    let sum = 0;
+    const laborersSumMap = {}
+
+    const xmlValues = Object.values(xmls);
+    for (let i = 0; i < xmlValues.length; i++) {
+      let laborSum = 0;
+      const xmlString = xmlValues[i];
+      
+      const xml = new DOMParser().parseFromString(xmlString, "text/xml");
+
+      const sumItems = xml.getElementsByTagName("itensRemun");
+      const cpfTrab = xml.getElementsByTagName("cpfTrab")[0].textContent;
+      const perApur = xml.getElementsByTagName("perApur")[0].textContent;
+
+      if (period.slice(0, 7) !== perApur) {
+        continue;
+      }
+      
+
+      for (const item of sumItems) {
+        const [vrRubr] = item.getElementsByTagName("vrRubr");
+        const [codRubr] = item.getElementsByTagName("codRubr");
+
+        if (!rubricas.includes(codRubr.textContent))
+          continue;
+
+        const value = Number(vrRubr.textContent)
+
+        laborSum += value;
+      }
+
+      laborersSumMap[cpfTrab] = laborersSumMap[cpfTrab] ? laborersSumMap[cpfTrab] + laborSum : laborSum
+      sum += laborSum;
+    }
+
+    setTotalSum(sum.toFixed(2))
+    setLaborersSum(laborersSumMap)
   }
 
   return (
@@ -33,19 +99,57 @@ function App() {
 
       <div className='interpreter-selection-div'>
         <h3>Selecione o tipo de evento</h3>
-        <select>
-          <option value="1200">Evento 1200</option>
-          <option value="5002">Evento 5002</option>
+        <select value={eventType} onChange={(e) => setEventType(e.target.value)}>
+          { availableEvents.map(event => <option key={event} value={event}>{ `Evento ${event}` }</option>) }
         </select>
       </div>
 
       <div className='interpreter-selection-div'>
         <h3>Selecione o período</h3>
-        <input type="date"></input>
+        <input value={period} onChange={(e) => setPeriod(e.target.value)} type="date"></input>
       </div>
 
+      
+      <div className='rubricas-input-div'>
+        <h3>Escreva as rúbricas</h3>
+        <textarea onChange={(e) => {
+            let rubricas = [];
+            let actualRubrica = "";
+            e.target.value.split('').concat(' ').forEach(char => {
+              if (!isNumeric(char)) {
+                if (actualRubrica !== "")
+                rubricas.push(actualRubrica)
+                actualRubrica = ""
+                return;
+              }
+              
+              actualRubrica += char;
+            });
+          setRubricas(rubricas)
+        }}></textarea>
+      </div>
+
+
       <div className='results-div'>
-        <button onClick={}>Calcular</button>
+        <button onClick={onClickCalc}>Calcular</button>
+      </div>
+
+      <div className='sum-div'>
+        <p className='sum-display'>Total: R$ {totalSum}</p>
+      </div>
+
+      <div className='laborers-div'>
+        <table>
+          <tr>
+            <th>CPF</th>
+            <th>Soma</th>
+          </tr>
+          <tr>
+            { Object.entries(laborersSum).map(laborer => (
+              <><tr><td>{laborer[0]}</td><td>{laborer[1]}</td></tr></>
+            )) }
+          </tr>
+        </table>
       </div>
 
     </main>
