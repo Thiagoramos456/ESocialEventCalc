@@ -13,15 +13,17 @@ export class Interpreter1200 {
       const sumItems = xml.getElementsByTagName("itensRemun");
       const cpfTrab = xml.getElementsByTagName("cpfTrab")[0].textContent;
       const perApur = xml.getElementsByTagName("perApur")[0].textContent;
+
+      
       if (period !== perApur) {
         continue;
       }
       
-
+      
       for (const item of sumItems) {
         const [vrRubr] = item.getElementsByTagName("vrRubr");
         const [codRubr] = item.getElementsByTagName("codRubr");
-
+        
         if (!rubricas.includes(codRubr.textContent))
           continue;
 

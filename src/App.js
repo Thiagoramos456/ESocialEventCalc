@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { availableEvents, getInterpreterSum } from './interpreters';
 import JSZip from 'jszip';
+import { Box, Button, Container, MenuItem, Paper, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 
 
-function isNumeric(value) {
-  return /^-?\d+$/.test(value);
+function isAlphanumeric(value) {
+  return /^[0-9a-zA-Z]+$/.test(value);
 }
 
 function App() {
@@ -43,11 +44,11 @@ function App() {
       }
       setXmls(xmlMap);
 
-      getApurationPossiblePeriods();
+      getApurationPossiblePeriods(xmlMap);
     })
   }
 
-  const getApurationPossiblePeriods = () => {
+  const getApurationPossiblePeriods = (xmls) => {
     const possiblePeriods = [];
     Object.entries(xmls).forEach(xml => {
       const fileName = xml[0];
@@ -65,10 +66,11 @@ function App() {
       }
     });
     setPossiblePeriods(possiblePeriods)
+    setPeriod (possiblePeriods[0])
   }
 
   useEffect(() => {
-    getApurationPossiblePeriods()
+    getApurationPossiblePeriods(xmls)
   }, [eventType])
 
   const onClickCalc = () => {
@@ -78,37 +80,40 @@ function App() {
   }
 
   return (
-    <main className="App">
+    <Container className="App">
       <h1>Calculadora de Eventos ESocial</h1>
 
-      <div className='file-selection-div'>
-        <h3>Selecione o arquivo .ZIP</h3>
+      <Box className='file-selection-div'>
+        <h2>Selecione o arquivo .ZIP</h2>
         <input type='file' id='file' onChange={handleFileChange} />
-      </div>
+      </Box>
 
-      <div className='interpreter-selection-div'>
-        <h3>Selecione o tipo de evento</h3>
-        <select value={eventType} onChange={(e) => setEventType(e.target.value)}>
-          { availableEvents.map(event => <option key={event} value={event}>{ `Evento ${event}` }</option>) }
-        </select>
-      </div>
-
-      <div className='interpreter-selection-div'>
-        <h3>Selecione o período</h3>
-        <select onChange={(e) => setPeriod(e.target.value)}>
-          { possiblePeriods.map(period => <option key={period} value={period}>{period}</option>) }
-        </select>
-      </div>
+      <Box className='interpreter-selection-div'>
+        <h2>Selecione o tipo de evento</h2>
+        <Select value={eventType} onChange={(e) => setEventType(e.target.value)}>
+          { availableEvents.map(event => <MenuItem key={event} value={event}>{ `Evento ${event}` }</MenuItem >) }
+        </Select>
+      </Box>
 
       {
-        eventType == "1200" &&
-        <div className='rubricas-input-div'>
-          <h3>Escreva as rúbricas</h3>
+        possiblePeriods.length > 0 &&
+        <Box className='interpreter-selection-div'>
+          <h2>Selecione o período</h2>
+          <Select label="Período de Apuração" value={period} onChange={(e) => setPeriod(e.target.value)}>
+            { possiblePeriods.map(period => <MenuItem key={period} value={period}>{period}</MenuItem>) }
+          </Select>
+        </Box>
+      }
+
+      {
+        eventType === "1200" &&
+        <Box className='rubricas-input-div'>
+          <h2>Escreva as rúbricas</h2>
           <textarea onChange={(e) => {
               let rubricas = [];
               let actualRubrica = "";
               e.target.value.split('').concat(' ').forEach(char => {
-                if (!isNumeric(char)) {
+                if (!isAlphanumeric(char)) {
                   if (actualRubrica !== "")
                   rubricas.push(actualRubrica)
                   actualRubrica = ""
@@ -119,33 +124,40 @@ function App() {
               });
             setRubricas(rubricas)
           }}></textarea>
-        </div>
+        </Box>
       }
 
 
-      <div className='results-div'>
-        <button onClick={onClickCalc}>Calcular</button>
-      </div>
+      <Box my={5} className='results-div'>
+        <Button variant="contained" onClick={onClickCalc}>Calcular</Button>
+      </Box>
 
-      <div className='sum-div'>
+      <Box className='sum-div'>
         <p className='sum-display'>Total: R$ {totalSum}</p>
-      </div>
+      </Box>
 
       <div className='laborers-div'>
-        <table>
-          <tr>
-            <th>CPF</th>
-            <th>Soma</th>
-          </tr>
-          <tr>
-            { Object.entries(laborersSum).map(laborer => (
-              <tr key={laborer[0]}><td>{laborer[0]}</td><td>{laborer[1]}</td></tr>
-            )) }
-          </tr>
-        </table>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>CPF</TableCell>
+                <TableCell>Soma</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              { Object.entries(laborersSum).map(laborer => (
+                <TableRow key={laborer[0]}>
+                  <TableCell>{laborer[0]}</TableCell>
+                  <TableCell>{laborer[1].toFixed(2)}</TableCell>
+                </TableRow>
+              )) }
+            </TableBody>
+          </Table>
+        </TableContainer>
       </div>
 
-    </main>
+    </Container>
   );
 }
 
