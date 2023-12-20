@@ -1,8 +1,8 @@
+import { useState } from 'react';
+import { availableEvents, getInterpreterSum } from './interpreters';
+import { parseXmlsZip } from './utils';
 import JSZip from 'jszip';
-import { useEffect, useRef, useState } from 'react';
 
-// const availableEvents = ["1200", "5002"]
-const availableEvents = ["1200"]
 
 function isNumeric(value) {
   return /^-?\d+$/.test(value);
@@ -26,65 +26,31 @@ function App() {
     }
   }
 
-  const loadXmls = async (zipFile) => {
+  const loadXmls = (zipFile) => {
     const xmlMap = {}
 
     JSZip.loadAsync(zipFile).then(async (zip) => {
       const zipFiles = Object.values(zip.files);
-
+    
       for (const file of zipFiles) {
         const name = file.name.split("S-")[1];
-
+    
         if (!name) continue;
-        
         if (!availableEvents.includes(name.replace(".xml", "")))
-          continue;
-
+        continue;
+      
         const xmlString = await file.async("string");
         xmlMap[file.name] = xmlString;
       }
+      console.log(xmlMap)
       setXmls(xmlMap);
     })
-
   }
 
   const onClickCalc = () => {
-    let sum = 0;
-    const laborersSumMap = {}
-
-    const xmlValues = Object.values(xmls);
-    for (let i = 0; i < xmlValues.length; i++) {
-      let laborSum = 0;
-      const xmlString = xmlValues[i];
-      
-      const xml = new DOMParser().parseFromString(xmlString, "text/xml");
-
-      const sumItems = xml.getElementsByTagName("itensRemun");
-      const cpfTrab = xml.getElementsByTagName("cpfTrab")[0].textContent;
-      const perApur = xml.getElementsByTagName("perApur")[0].textContent;
-
-      if (period.slice(0, 7) !== perApur) {
-        continue;
-      }
-      
-
-      for (const item of sumItems) {
-        const [vrRubr] = item.getElementsByTagName("vrRubr");
-        const [codRubr] = item.getElementsByTagName("codRubr");
-
-        if (!rubricas.includes(codRubr.textContent))
-          continue;
-
-        const value = Number(vrRubr.textContent)
-
-        laborSum += value;
-      }
-
-      laborersSumMap[cpfTrab] = laborersSumMap[cpfTrab] ? laborersSumMap[cpfTrab] + laborSum : laborSum
-      sum += laborSum;
-    }
-
-    setTotalSum(sum.toFixed(2))
+    console.log(xmls)
+    const {sum, laborersSumMap} = getInterpreterSum(eventType, rubricas, period, xmls);
+    setTotalSum(sum)
     setLaborersSum(laborersSumMap)
   }
 
