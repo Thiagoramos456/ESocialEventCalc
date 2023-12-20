@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { availableEvents, getInterpreterSum } from './interpreters';
-import { parseXmlsZip } from './utils';
 import JSZip from 'jszip';
 
 
@@ -11,9 +10,9 @@ function isNumeric(value) {
 function App() {
   const [xmls, setXmls] = useState({});
   const [eventType, setEventType] = useState("1200");
-  const [period, setPeriod] = useState("2025-02-20");
-  const [rubricasInput, setRubricasInput] = useState("");
+  const [period, setPeriod] = useState();
   const [rubricas, setRubricas] = useState("");
+  const [possiblePeriods, setPossiblePeriods] = useState([]);
 
   const [totalSum, setTotalSum] = useState("");
   const [laborersSum, setLaborersSum] = useState({});
@@ -42,13 +41,37 @@ function App() {
         const xmlString = await file.async("string");
         xmlMap[file.name] = xmlString;
       }
-      console.log(xmlMap)
       setXmls(xmlMap);
+
+      getApurationPossiblePeriods();
     })
   }
 
+  const getApurationPossiblePeriods = () => {
+    const possiblePeriods = [];
+    Object.entries(xmls).forEach(xml => {
+      const fileName = xml[0];
+      const xmlString = xml[1];
+
+      if (!fileName.includes(`S-${eventType}`))
+        return;
+
+      const xmlParsed = new DOMParser().parseFromString(xmlString, "text/xml");
+
+      const perApur = xmlParsed.getElementsByTagName("perApur")[0].textContent;
+      
+      if (!possiblePeriods.includes(perApur)) {
+        possiblePeriods.push(perApur);
+      }
+    });
+    setPossiblePeriods(possiblePeriods)
+  }
+
+  useEffect(() => {
+    getApurationPossiblePeriods()
+  }, [eventType])
+
   const onClickCalc = () => {
-    console.log(xmls)
     const {sum, laborersSumMap} = getInterpreterSum(eventType, rubricas, period, xmls);
     setTotalSum(sum)
     setLaborersSum(laborersSumMap)
@@ -72,28 +95,32 @@ function App() {
 
       <div className='interpreter-selection-div'>
         <h3>Selecione o período</h3>
-        <input value={period} onChange={(e) => setPeriod(e.target.value)} type="date"></input>
+        <select onChange={(e) => setPeriod(e.target.value)}>
+          { possiblePeriods.map(period => <option key={period} value={period}>{period}</option>) }
+        </select>
       </div>
 
-      
-      <div className='rubricas-input-div'>
-        <h3>Escreva as rúbricas</h3>
-        <textarea onChange={(e) => {
-            let rubricas = [];
-            let actualRubrica = "";
-            e.target.value.split('').concat(' ').forEach(char => {
-              if (!isNumeric(char)) {
-                if (actualRubrica !== "")
-                rubricas.push(actualRubrica)
-                actualRubrica = ""
-                return;
-              }
-              
-              actualRubrica += char;
-            });
-          setRubricas(rubricas)
-        }}></textarea>
-      </div>
+      {
+        eventType == "1200" &&
+        <div className='rubricas-input-div'>
+          <h3>Escreva as rúbricas</h3>
+          <textarea onChange={(e) => {
+              let rubricas = [];
+              let actualRubrica = "";
+              e.target.value.split('').concat(' ').forEach(char => {
+                if (!isNumeric(char)) {
+                  if (actualRubrica !== "")
+                  rubricas.push(actualRubrica)
+                  actualRubrica = ""
+                  return;
+                }
+                
+                actualRubrica += char;
+              });
+            setRubricas(rubricas)
+          }}></textarea>
+        </div>
+      }
 
 
       <div className='results-div'>
@@ -112,7 +139,7 @@ function App() {
           </tr>
           <tr>
             { Object.entries(laborersSum).map(laborer => (
-              <><tr><td>{laborer[0]}</td><td>{laborer[1]}</td></tr></>
+              <tr key={laborer[0]}><td>{laborer[0]}</td><td>{laborer[1]}</td></tr>
             )) }
           </tr>
         </table>

@@ -13,8 +13,7 @@ export class Interpreter1200 {
       const sumItems = xml.getElementsByTagName("itensRemun");
       const cpfTrab = xml.getElementsByTagName("cpfTrab")[0].textContent;
       const perApur = xml.getElementsByTagName("perApur")[0].textContent;
-
-      if (period.slice(0, 7) !== perApur) {
+      if (period !== perApur) {
         continue;
       }
       

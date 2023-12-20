@@ -14,7 +14,6 @@ export function getInterpreterSum(eventType, rubricas, period, xmls) {
 
   const filteredXmls = {}
 
-  console.log(xmls)
   for (const key in xmls) {
 
     if (key.includes(`S-${eventType}`)) {

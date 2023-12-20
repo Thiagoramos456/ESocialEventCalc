@@ -14,9 +14,8 @@ export class Interpreter5002 {
       const cpfTrab = xml.getElementsByTagName("cpfBenef")[0].textContent;
       const perApur = xml.getElementsByTagName("perApur")[0].textContent;
 
-      console.log(sumItems)
 
-      if (period.slice(0, 7) !== perApur) {
+      if (period !== perApur) {
         continue;
       }
       
